@@ -14,8 +14,10 @@ namespace PerformanceBiller
             var cultureInfo = new CultureInfo("en-US");
 
             foreach (JObject perf in invoice.GetValue("performances")) {
+
                 var play = (JObject) plays.GetValue(perf.GetValue("playID").ToString());
                 var thisAmount = 0;
+
                 switch (play.GetValue("type").ToString()) {
                     case "tragedy":
                         thisAmount = 40000;
