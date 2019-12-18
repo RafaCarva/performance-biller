@@ -1,27 +1,33 @@
 ﻿using Newtonsoft.Json.Linq;
+using PerformanceBiller.Infrastructure;
+using PerformanceBiller.Models;
+using PerformanceBiller.Models.ValueObjects;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace PerformanceBiller
 {
     public class StatementRefactor
+
     {
         decimal totalAmount = 0;
         decimal volumeCredits = 0;
         string billOutput = "";
         CultureInfo cultureInfo = new CultureInfo("en-US");
-        private JObject _clientInvoice;
-        private JObject _plays;
 
-        public StatementRefactor(JObject clientInvoice, JObject plays)
+        Invoices invoice = new Invoices();
+        List<Play> plays = new List<Play>();
+
+
+        public StatementRefactor()
         {
-            _clientInvoice = clientInvoice;
-            _plays = plays;
+            // Use JsonReader.cs to populate invoice and plays vars.
         }
 
         public string calculateClientInvoice()
         {
-            buildBillOutput($"Statement for {_clientInvoice.GetValue("customer")}\n");
+            buildBillOutput($"Statement for {invoice.customerName}\n");
 
             calculateAllPlayValues();
 
@@ -37,29 +43,29 @@ namespace PerformanceBiller
         {
             try
             {
-                // Example of pref: { "playID": "hamlet","audience": 55 }
-                foreach (JObject perf in _clientInvoice.GetValue("performances"))
-            {
-                var playName = perf.GetValue("playID").ToString();
-                var playAudience = Convert.ToInt32(perf.GetValue("audience"));
+                foreach (Performace perf in invoice.performList)
+                {
+                    var playName = perf.playID;
+                    var playAudience = perf.audience;
 
-                var singlePlayAmount = calculateSinglePlayValue(playName, playAudience);
+                    var singlePlayAmount = calculateSinglePlayValue(playName, playAudience);
 
-                buildVolumeCredits(Math.Max(Convert.ToInt32(perf.GetValue("audience")) - 30, 0));
+                    buildVolumeCredits(Math.Max(playAudience - 30, 0));
 
-                // add extra credit for every ten comedy attendees
-                if ("comedy" == _plays.GetValue("type").ToString()) buildVolumeCredits(Convert.ToInt32(perf.GetValue("audience")) / 5);
+                    if (playName == "as-like")
+                    {
+                        buildVolumeCredits(playAudience / 5);
+                    }
+                    
+                    buildBillOutput($" {invoice.customerName}: {(singlePlayAmount / 100).ToString("C", cultureInfo)} ({playAudience} seats)\n");
 
-                buildBillOutput($" {_clientInvoice.GetValue("name")}: {(singlePlayAmount / 100).ToString("C", cultureInfo)} ({perf.GetValue("audience")} seats)\n");
-
-                totalAmount += singlePlayAmount;
-            }
+                    totalAmount += singlePlayAmount;
+                }
             }
             catch (Exception error)
             {
                 Console.WriteLine(error);
             }
-
 
         }
         
